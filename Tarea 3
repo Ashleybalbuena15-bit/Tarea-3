@@ -1,0 +1,203 @@
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+
+// MODELO
+public class Contact
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string LastName { get; set; }
+    public string Address { get; set; }
+    public string Email { get; set; }
+    public string Gender { get; set; }
+    public int Age { get; set; }
+    public bool IsFavorite { get; set; }
+}
+
+// CLASE CONTACTES (CRUD)
+public class Contactes
+{
+    private string connectionString = "Server=.;Database=contactesad;Trusted_Connection=True;";
+
+    public void AddContact(Contact contact)
+    {
+        try
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                string query = @"INSERT INTO Contacts 
+                (Name, LastName, Address, Email, Gender, Age, IsFavorite)
+                VALUES (@Name, @LastName, @Address, @Email, @Gender, @Age, @IsFavorite)";
+
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Name", contact.Name);
+                cmd.Parameters.AddWithValue("@LastName", contact.LastName);
+                cmd.Parameters.AddWithValue("@Address", contact.Address);
+                cmd.Parameters.AddWithValue("@Email", contact.Email);
+                cmd.Parameters.AddWithValue("@Gender", contact.Gender);
+                cmd.Parameters.AddWithValue("@Age", contact.Age);
+                cmd.Parameters.AddWithValue("@IsFavorite", contact.IsFavorite);
+
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+
+            Console.WriteLine("Contacto agregado correctamente.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error al agregar: " + ex.Message);
+        }
+    }
+
+    public List<Contact> GetContacts()
+    {
+        List<Contact> list = new List<Contact>();
+
+        try
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                string query = "SELECT * FROM Contacts";
+                SqlCommand cmd = new SqlCommand(query, conn);
+
+                conn.Open();
+                SqlDataReader reader = cmd.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    list.Add(new Contact
+                    {
+                        Id = (int)reader["Id"],
+                        Name = reader["Name"].ToString(),
+                        LastName = reader["LastName"].ToString(),
+                        Address = reader["Address"].ToString(),
+                        Email = reader["Email"].ToString(),
+                        Gender = reader["Gender"].ToString(),
+                        Age = reader["Age"] != DBNull.Value ? (int)reader["Age"] : 0,
+                        IsFavorite = (bool)reader["IsFavorite"]
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error al listar: " + ex.Message);
+        }
+
+        return list;
+    }
+
+    public void DeleteContact(int id)
+    {
+        try
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                string query = "DELETE FROM Contacts WHERE Id=@Id";
+
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Id", id);
+
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+
+            Console.WriteLine("Contacto eliminado.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error al eliminar: " + ex.Message);
+        }
+    }
+}
+
+// PROGRAMA PRINCIPAL
+class Program
+{
+    static void Main(string[] args)
+    {
+        Contactes contactos = new Contactes();
+        bool run = true;
+
+        while (run)
+        {
+            try
+            {
+                Console.WriteLine("\n===== AGENDA SQL =====");
+                Console.WriteLine("1. Agregar Contacto");
+                Console.WriteLine("2. Ver Contactos");
+                Console.WriteLine("3. Eliminar Contacto");
+                Console.WriteLine("4. Salir");
+
+                Console.Write("Elige una opción: ");
+                int op = Convert.ToInt32(Console.ReadLine());
+
+                switch (op)
+                {
+                    case 1:
+                        Contact c = new Contact();
+
+                        Console.Write("Nombre: ");
+                        c.Name = Console.ReadLine();
+
+                        Console.Write("Apellido: ");
+                        c.LastName = Console.ReadLine();
+
+                        Console.Write("Dirección: ");
+                        c.Address = Console.ReadLine();
+
+                        Console.Write("Email: ");
+                        c.Email = Console.ReadLine();
+
+                        Console.Write("Género: ");
+                        c.Gender = Console.ReadLine();
+
+                        Console.Write("Edad: ");
+                        c.Age = Convert.ToInt32(Console.ReadLine());
+
+                        Console.Write("¿Es favorito? (1=Sí / 2=No): ");
+                        c.IsFavorite = Convert.ToInt32(Console.ReadLine()) == 1;
+
+                        contactos.AddContact(c);
+                        break;
+
+                    case 2:
+                        var lista = contactos.GetContacts();
+
+                        if (lista.Count == 0)
+                        {
+                            Console.WriteLine("No hay contactos.");
+                            break;
+                        }
+
+                        foreach (var x in lista)
+                        {
+                            string fav = x.IsFavorite ? "Si" : "No";
+                            Console.WriteLine($"{x.Id} - {x.Name} {x.LastName} | Edad: {x.Age} | Favorito: {fav}");
+                        }
+                        break;
+
+                    case 3:
+                        Console.Write("ID a eliminar: ");
+                        int id = Convert.ToInt32(Console.ReadLine());
+                        contactos.DeleteContact(id);
+                        break;
+
+                    case 4:
+                        run = false;
+                        break;
+
+                    default:
+                        Console.WriteLine("Opción inválida");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error general: " + ex.Message);
+            }
+        }
+    }
+}
